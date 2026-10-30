@@ -24,4 +24,4 @@ Esta primera iteración contempla:
 ## Cómo ejecutar
 1. Clonar el repositorio:
    ```bash
-   git clone https://github.com/TU_USUARIO/autos-colombia.git
+   git clone :https://github.com/Midyss/autos-colombia.git
