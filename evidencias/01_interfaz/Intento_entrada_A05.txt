@@ -1,0 +1,25 @@
+===========================================
+PT-09: Intento de entrada en celda A-05
+Estado de la celda: Mantenimiento
+===========================================
+
+Fecha y hora: 15/11/2026 - 02:04 AM
+Usuario: Santiago Mendez (Administrador)
+
+ACCIÓN REALIZADA:
+Se intentó registrar la entrada del vehículo con placa MKT-456 
+en la celda A-05.
+
+RESULTADO DEL SISTEMA:
+ ERROR: La celda A-05 no está disponible.
+   Estado actual: Mantenimiento
+   No se puede asignar vehículo a celda en mantenimiento.
+
+MENSAJE MOSTRADO EN LA INTERFAZ:
+"Error: La celda A-05 está en mantenimiento y no puede recibir vehículos"
+
+===========================================
+CONCLUSIÓN:
+El sistema correctamente rechaza la entrada 
+de vehículos en celdas con estado "Mantenimiento".
+===========================================

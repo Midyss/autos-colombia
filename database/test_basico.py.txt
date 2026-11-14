@@ -1,0 +1,85 @@
+import pytest
+from app import create_app
+from app.extensions import db
+from app.models import Usuario, Vehiculo, Contrato, Celda, Estancia
+from app.servicios import ServicioParqueadero, ReglaNegocioError
+
+@pytest.fixture
+def app():
+    """Crea una aplicación de prueba con base de datos en memoria"""
+    app = create_app()
+    app.config['TESTING'] = True
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    
+    with app.app_context():
+        db.create_all()
+        
+        # Crear usuario de prueba
+        user = Usuario(
+            nombre_completo="Sofia Madariaga", 
+            cedula="123456789", 
+            nombre_usuario="sofia", 
+            rol="Operador"
+        )
+        user.set_password("123")
+        db.session.add(user)
+        
+        # Crear vehículo de prueba
+        vehiculo = Vehiculo(placa="MKT456", tipo="Automóvil", color="Gris", propietario="Juan")
+        db.session.add(vehiculo)
+        db.session.commit()
+        
+        # Crear contrato activo
+        contrato = Contrato(
+            id_vehiculo=vehiculo.id, 
+            fecha_inicio='2026-01-01', 
+            fecha_fin='2026-12-31', 
+            estado='Activo'
+        )
+        db.session.add(contrato)
+        
+        # Crear celda disponible
+        celda = Celda(codigo="A-01", tipo="Automóvil", estado="Disponible")
+        db.session.add(celda)
+        db.session.commit()
+        
+        yield app
+        db.session.remove()
+        db.drop_all()
+
+def test_entrada_exitosa(app):
+    """Prueba que una entrada se registre correctamente"""
+    with app.app_context():
+        user = Usuario.query.first()
+        resultado = ServicioParqueadero.registrar_entrada("MKT456", user.id)
+        assert "Entrada exitosa" in resultado
+        assert Celda.query.filter_by(codigo="A-01", estado="Ocupada").first() is not None
+
+def test_vehiculo_ya_dentro(app):
+    """Prueba que no se permita ingresar un vehículo que ya está dentro"""
+    with app.app_context():
+        user = Usuario.query.first()
+        ServicioParqueadero.registrar_entrada("MKT456", user.id)
+        
+        with pytest.raises(ReglaNegocioError, match="ya se encuentra dentro"):
+            ServicioParqueadero.registrar_entrada("MKT456", user.id)
+
+def test_sin_mensualidad(app):
+    """Prueba que se rechace un vehículo sin contrato activo"""
+    with app.app_context():
+        user = Usuario.query.first()
+        # Crear vehículo sin contrato
+        v = Vehiculo(placa="SIN123", tipo="Moto", color="Negro", propietario="Test")
+        db.session.add(v)
+        db.session.commit()
+        
+        with pytest.raises(ReglaNegocioError, match="no tiene un contrato"):
+            ServicioParqueadero.registrar_entrada("SIN123", user.id)
+
+def test_vehiculo_no_registrado(app):
+    """Prueba que se rechace una placa inexistente"""
+    with app.app_context():
+        user = Usuario.query.first()
+        
+        with pytest.raises(ReglaNegocioError, match="no registrado"):
+            ServicioParqueadero.registrar_entrada("XXX999", user.id)
