@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autos Colombia - Sistema de Parqueadero</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background: #f5f7fa; color: #333; }
+
+        /* LOGIN */
+        .login-container { display: flex; min-height: 100vh; }
+        .login-left {
+            flex: 1; background: linear-gradient(135deg, #1e3a5f 0%, #2c5f7c 100%);
+            color: white; display: flex; flex-direction: column;
+            justify-content: space-between; padding: 60px;
+        }
+        .brand { display: flex; align-items: center; gap: 15px; }
+        .brand-icon { width: 45px; height: 45px; background: #4ade80; border-radius: 10px; }
+        .brand-text h1 { font-size: 28px; font-weight: 700; }
+        .brand-text p { font-size: 14px; opacity: 0.8; margin-top: 4px; }
+        .center-message { flex: 1; display: flex; align-items: center; justify-content: center; }
+        .center-message h2 { font-size: 36px; font-weight: 700; }
+        .footer-text { font-size: 12px; opacity: 0.6; }
+        .login-right { flex: 1; background: white; display: flex; align-items: center; justify-content: center; padding: 40px; }
+        .login-form { max-width: 400px; width: 100%; }
+        .login-form h2 { font-size: 28px; margin-bottom: 10px; color: #1e3a5f; }
+        .login-form .subtitle { color: #666; margin-bottom: 30px; font-size: 14px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 12px; border: 2px solid #e0e0e0;
+            border-radius: 6px; font-size: 14px; background: white;
+        }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #1e3a5f; }
+        .btn-login {
+            width: 100%; padding: 14px; background: #4ade80; color: white;
+            border: none; border-radius: 6px; font-size: 16px; font-weight: 600;
+            cursor: pointer; margin-top: 10px;
+        }
+        .btn-login:hover { background: #22c55e; }
+        .error-msg {
+            background: #fef2f2; border: 1px solid #fecaca; color: #dc2626;
+            padding: 12px; border-radius: 6px; font-size: 13px;
+            text-align: center; margin-top: 15px; display: none;
+        }
+        .error-msg.visible { display: block; }
+        .success-msg {
+            background: #d1fae5; border: 1px solid #6ee7b7; color: #065f46;
+            padding: 12px; border-radius: 6px; font-size: 13px;
+            text-align: center; margin-top: 15px; display: none;
+        }
+        .success-msg.visible { display: block; }
+
+        /* DASHBOARD */
+        .dashboard { display: none; }
+        .sidebar {
+            position: fixed; left: 0; top: 0; width: 260px; height: 100vh;
+            background: #1e3a5f; color: white; padding: 20px 0; overflow-y: auto; z-index: 100;
+        }
+        .sidebar-brand { padding: 0 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
+        .sidebar-brand h2 { font-size: 20px; margin-bottom: 5px; }
+        .sidebar-brand p { font-size: 12px; opacity: 0.7; }
+        .sidebar-menu { list-style: none; padding: 0 15px; }
+        .sidebar-menu li { margin-bottom: 5px; }
+        .sidebar-menu a {
+            display: block; padding: 12px 15px; color: rgba(255,255,255,0.8);
+            text-decoration: none; border-radius: 6px; font-size: 14px; cursor: pointer;
+        }
+        .sidebar-menu a:hover { background: rgba(255,255,255,0.1); color: white; }
+        .sidebar-menu a.active { background: #4ade80; color: white; font-weight: 600; }
+        .sidebar-user {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 15px 20px; background: rgba(0,0,0,0.2);
+            display: flex; align-items: center; gap: 12px;
+        }
+        .user-avatar {
+            width: 40px; height: 40px; border-radius: 50%; background: #4ade80;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 14px; color: white;
+        }
+        .user-info h4 { font-size: 13px; font-weight: 600; }
+        .user-info p { font-size: 11px; opacity: 0.7; }
+        .main-content { margin-left: 260px; min-height: 100vh; }
+        .topbar {
+            background: white; padding: 15px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #e0e0e0; position: sticky; top: 0; z-index: 50;
+        }
+        .topbar h1 { font-size: 22px; color: #1e3a5f; }
+        .profile-dropdown { position: relative; }
+        .profile-trigger {
+            display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+            background: #f8fafc; border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer;
+        }
+        .profile-trigger:hover { background: #e2e8f0; }
+        .profile-avatar {
+            width: 32px; height: 32px; border-radius: 50%; background: #1e3a5f;
+            color: white; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 12px;
+        }
+        .profile-info { display: flex; flex-direction: column; align-items: flex-start; }
+        .profile-name { font-size: 13px; font-weight: 600; color: #1e3a5f; }
+        .profile-role { font-size: 11px; color: #666; }
+        .profile-arrow { font-size: 10px; color: #666; }
+        .profile-menu {
+            position: absolute; top: calc(100% + 8px); right: 0; width: 220px;
+            background: white; border: 1px solid #e0e0e0; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none; z-index: 1000;
+        }
+        .profile-dropdown.open .profile-menu { display: block; }
+        .profile-menu-header { padding: 15px; border-bottom: 1px solid #e0e0e0; background: #f8fafc; }
+        .profile-menu-header .name { font-size: 14px; font-weight: 600; color: #1e3a5f; margin-bottom: 4px; }
+        .profile-menu-header .email { font-size: 12px; color: #666; }
+        .role-badge {
+            display: inline-block; margin-top: 8px; padding: 3px 10px;
+            border-radius: 12px; font-size: 11px; font-weight: 600;
+        }
+        .role-admin { background: #fef3c7; color: #92400e; }
+        .role-operador { background: #d1fae5; color: #065f46; }
+        .profile-menu-item {
+            display: block; padding: 10px 15px; font-size: 13px;
+            color: #333; cursor: pointer;
+        }
+        .profile-menu-item:hover { background: #f8fafc; }
+        .profile-menu-item.danger { color: #dc2626; }
+        .content-area { padding: 30px; }
+        .content-panel { background: white; padding: 30px; border-radius: 8px; border: 1px solid #e0e0e0; }
+        .content-panel h2 { font-size: 20px; margin-bottom: 10px; color: #1e3a5f; }
+        .content-panel > p { color: #666; font-size: 14px; margin-bottom: 20px; }
+        .form-inline { display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: end; max-width: 500px; }
+        .btn-action {
+            padding: 12px 24px; background: #4ade80; color: white;
+            border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;
+        }
+        .btn-action:hover { background: #22c55e; }
+        .btn-small {
+            padding: 6px 12px; border: none; border-radius: 4px;
+            cursor: pointer; font-size: 12px; font-weight: 600; color: white;
+        }
+        .btn-danger { background: #dc2626; }
+        .btn-warning { background: #f59e0b; }
+        .btn-success { background: #4ade80; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background: #f8fafc; padding: 12px; text-align: left; font-size: 13px; border-bottom: 2px solid #e0e0e0; }
+        td { padding: 12px; border-bottom: 1px solid #e0e0e0; font-size: 13px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .form-grid input, .form-grid select { padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-left">
+            <div class="brand">
+                <div class="brand-icon"></div>
+                <div class="brand-text">
+                    <h1>Autos Colombia</h1>
+                    <p>Sistema de Gestión de Parqueadero</p>
+                </div>
+            </div>
+            <div class="center-message"><h2>Bienvenido al sistema</h2></div>
+            <div class="footer-text">© 2026 Autos Colombia. Todos los derechos reservados.</div>
+        </div>
+        <div class="login-right">
+            <div class="login-form">
+                <h2>Iniciar sesión</h2>
+                <p class="subtitle">Accede a tu cuenta para continuar</p>
+                <div class="form-group">
+                    <label>Nombre de usuario</label>
+                    <input type="text" id="loginUsuario" autocomplete="off" autocorrect="off" spellcheck="false">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="loginPassword" autocomplete="new-password">
+                </div>
+                <button class="btn-login" onclick="login()">Ingresar</button>
+                <div id="loginError" class="error-msg"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard" class="dashboard">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h2>Autos Colombia</h2>
+                <p>Parqueadero</p>
+            </div>
+            <ul class="sidebar-menu" id="sidebarMenu"></ul>
+            <div class="sidebar-user">
+                <div class="user-avatar" id="userAvatar">--</div>
+                <div class="user-info">
+                    <h4 id="sidebarUserName">Usuario</h4>
+                    <p id="sidebarUserEmail">correo</p>
+                </div>
+            </div>
+        </aside>
+        <main class="main-content">
+            <div class="topbar">
+                <h1 id="pageTitle">Dashboard</h1>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="profile-trigger" onclick="toggleProfileMenu()">
+                        <div class="profile-avatar" id="profileAvatar">--</div>
+                        <div class="profile-info">
+                            <span class="profile-name" id="profileName">Usuario</span>
+                            <span class="profile-role" id="profileRole">Rol</span>
+                        </div>
+                        <span class="profile-arrow">▼</span>
+                    </div>
+                    <div class="profile-menu">
+                        <div class="profile-menu-header">
+                            <div class="name" id="menuUserName">Usuario</div>
+                            <div class="email" id="menuUserEmail">correo</div>
+                            <span class="role-badge" id="menuUserRole">Rol</span>
+                        </div>
+                        <div class="profile-menu-item danger" onclick="logout()">Cerrar sesión</div>
+                    </div>
+                </div>
+            </div>
+            <div class="content-area" id="contentArea"></div>
+        </main>
+    </div>
+
+    <script>
+        let usuarioActual = null;
+
+        window.addEventListener('load', () => {
+            document.getElementById('loginUsuario').value = '';
+            document.getElementById('loginPassword').value = '';
+        });
+
+        document.addEventListener('click', (e) => {
+            const dd = document.getElementById('profileDropdown');
+            if (dd && !dd.contains(e.target)) dd.classList.remove('open');
+        });
+
+        function toggleProfileMenu() {
+            document.getElementById('profileDropdown').classList.toggle('open');
+        }
+
+        async function login() {
+            const errorDiv = document.getElementById('loginError');
+            errorDiv.classList.remove('visible');
+            const usuario = document.getElementById('loginUsuario').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+
+            if (!usuario || !password) {
+                errorDiv.textContent = 'Por favor completa todos los campos';
+                errorDiv.classList.add('visible');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario, password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    usuarioActual = data;
+                    mostrarDashboard(data);
+                } else {
+                    errorDiv.textContent = data.error || 'Credenciales inválidas';
+                    errorDiv.classList.add('visible');
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Error de conexión. Verifica que Flask esté corriendo.';
+                errorDiv.classList.add('visible');
+            }
+        }
+
+        function mostrarDashboard(u) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            const iniciales = u.nombre_completo.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+            document.getElementById('userAvatar').textContent = iniciales;
+            document.getElementById('profileAvatar').textContent = iniciales;
+            document.getElementById('sidebarUserName').textContent = u.nombre_completo;
+            document.getElementById('profileName').textContent = u.nombre_completo;
+            document.getElementById('profileRole').textContent = u.rol;
+            document.getElementById('sidebarUserEmail').textContent = u.nombre_usuario + '@autoscolombia.co';
+            document.getElementById('menuUserName').textContent = u.nombre_completo;
+            document.getElementById('menuUserEmail').textContent = u.nombre_usuario + '@autoscolombia.co';
+            const badge = document.getElementById('menuUserRole');
+            badge.textContent = u.rol;
+            badge.className = 'role-badge ' + (u.rol === 'Administrador' ? 'role-admin' : 'role-operador');
+
+            const menu = document.getElementById('sidebarMenu');
+            if (u.rol === 'Administrador') {
+                menu.innerHTML = `
+                    <li><a class="active" onclick="ir('dashboard', this)">Dashboard</a></li>
+                    <li><a onclick="ir('entrada', this)">Registrar Entrada</a></li>
+                    <li><a onclick="ir('vehiculos', this)">Vehículos Presentes</a></li>
+                    <li><a onclick="ir('usuarios', this)">Gestión de Usuarios</a></li>
+                    <li><a onclick="ir('celdas', this)">Gestión de Celdas</a></li>`;
+            } else {
+                menu.innerHTML = `
+                    <li><a class="active" onclick="ir('dashboard', this)">Dashboard</a></li>
+                    <li><a onclick="ir('entrada', this)">Registrar Entrada</a></li>
+                    <li><a onclick="ir('vehiculos', this)">Vehículos Presentes</a></li>`;
+            }
+            ir('dashboard');
+        }
+
+        function ir(seccion, el) {
+            document.getElementById('profileDropdown').classList.remove('open');
+            if (el) {
+                document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
+                el.classList.add('active');
+            }
+            const c = document.getElementById('contentArea');
+            const t = document.getElementById('pageTitle');
+            if (seccion === 'dashboard') {
+                t.textContent = 'Dashboard';
+                c.innerHTML = `<div class="content-panel"><h2>Bienvenido, ${usuarioActual.nombre_completo.split(' ')[0]}</h2><p>Rol: ${usuarioActual.rol}. Usa el menú lateral para navegar.</p></div>`;
+            } else if (seccion === 'entrada') {
+                t.textContent = 'Registrar Entrada';
+                c.innerHTML = `
+                    <div class="content-panel">
+                        <h2>Registrar Entrada</h2>
+                        <p>Ingresa la placa del vehículo para asignar una celda disponible.</p>
+                        <div class="form-inline">
+                            <div class="form-group" style="margin:0">
+                                <label>Placa</label>
+                                <input type="text" id="placaInput" placeholder="MKT-456">
+                            </div>
+                            <button class="btn-action" onclick="registrarEntrada()">Ingresar</button>
+                        </div>
+                        <div id="msgEntrada" class="success-msg"></div>
+                        <div id="errEntrada" class="error-msg"></div>
+                    </div>`;
+            } else if (seccion === 'vehiculos') {
+                t.textContent = 'Vehículos Presentes';
+                c.innerHTML = `
+                    <div class="content-panel">
+                        <h2>Vehículos Presentes</h2>
+                        <p>Lista en tiempo real de vehículos dentro del parqueadero.</p>
+                        <table>
+                            <thead><tr><th>Placa</th><th>Tipo</th><th>Celda</th><th>Operador</th><th>Entrada</th></tr></thead>
+                            <tbody id="tablaVehiculos"><tr><td colspan="5" style="text-align:center;color:#666">Cargando...</td></tr></tbody>
+                        </table>
+                    </div>`;
+                cargarVehiculos();
+            } else if (seccion === 'usuarios') {
+                t.textContent = 'Gestión de Usuarios';
+                c.innerHTML = `
+                    <div class="content-panel">
+                        <h2>Crear Nuevo Usuario</h2>
+                        <div class="form-grid">
+                            <input type="text" id="nNombre" placeholder="Nombre completo">
+                            <input type="text" id="nCedula" placeholder="Cédula">
+                            <input type="text" id="nUsuario" placeholder="Nombre de usuario">
+                            <input type="password" id="nPassword" placeholder="Contraseña">
+                            <select id="nRol"><option>Operador</option><option>Administrador</option></select>
+                            <button class="btn-action" onclick="crearUsuario()">Crear Usuario</button>
+                        </div>
+                        <div id="msgUsuario" class="success-msg"></div>
+                        <div id="errUsuario" class="error-msg"></div>
+                        <h2 style="margin-top:30px">Usuarios del Sistema</h2>
+                        <table>
+                            <thead><tr><th>ID</th><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+                            <tbody id="tablaUsuarios"></tbody>
+                        </table>
+                    </div>`;
+                cargarUsuarios();
+            } else if (seccion === 'celdas') {
+                t.textContent = 'Gestión de Celdas';
+                c.innerHTML = `
+                    <div class="content-panel">
+                        <h2>Gestión de Celdas</h2>
+                        <p>Cambia el estado de las celdas del parqueadero.</p>
+                        <div id="msgCelda" class="success-msg"></div>
+                        <table>
+                            <thead><tr><th>ID</th><th>Código</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead>
+                            <tbody id="tablaCeldas"></tbody>
+                        </table>
+                    </div>`;
+                cargarCeldas();
+            }
+        }
+
+        async function registrarEntrada() {
+            const placa = document.getElementById('placaInput').value.trim();
+            const ok = document.getElementById('msgEntrada');
+            const err = document.getElementById('errEntrada');
+            ok.classList.remove('visible'); err.classList.remove('visible');
+            if (!placa) { err.textContent = 'Ingresa una placa'; err.classList.add('visible'); return; }
+            try {
+                const r = await fetch('/api/entrada', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ placa, id_usuario: usuarioActual.id })
+                });
+                const d = await r.json();
+                if (r.ok) { ok.textContent = ' ' + d.message; ok.classList.add('visible'); }
+                else { err.textContent = ' ' + d.error; err.classList.add('visible'); }
+            } catch (e) { err.textContent = 'Error de conexión'; err.classList.add('visible'); }
+        }
+
+        async function cargarVehiculos() {
+            try {
+                const r = await fetch('/api/vehiculos-presentes');
+                const lista = await r.json();
+                const tb = document.getElementById('tablaVehiculos');
+                if (lista.length === 0) {
+                    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#666">No hay vehículos presentes</td></tr>';
+                } else {
+                    tb.innerHTML = lista.map(v => `<tr><td><strong>${v.placa}</strong></td><td>${v.tipo}</td><td>${v.celda}</td><td>${v.operador}</td><td>${v.fecha_entrada}</td></tr>`).join('');
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function cargarUsuarios() {
+            try {
+                const r = await fetch('/api/usuarios');
+                const lista = await r.json();
+                document.getElementById('tablaUsuarios').innerHTML = lista.map(u => `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td><strong>${u.nombre_completo}</strong></td>
+                        <td>${u.nombre_usuario}</td>
+                        <td>${u.rol}</td>
+                        <td><span class="role-badge ${u.estado==='Activo'?'role-operador':'role-admin'}">${u.estado}</span></td>
+                        <td>${u.estado==='Activo' ? `<button class="btn-small btn-danger" onclick="desactivarUsuario(${u.id})">Desactivar</button>` : '-'}</td>
+                    </tr>`).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function crearUsuario() {
+            const datos = {
+                nombre_completo: document.getElementById('nNombre').value,
+                cedula: document.getElementById('nCedula').value,
+                nombre_usuario: document.getElementById('nUsuario').value,
+                password: document.getElementById('nPassword').value,
+                rol: document.getElementById('nRol').value
+            };
+            const ok = document.getElementById('msgUsuario');
+            const err = document.getElementById('errUsuario');
+            ok.classList.remove('visible'); err.classList.remove('visible');
+            try {
+                const r = await fetch('/api/usuarios', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datos)
+                });
+                const d = await r.json();
+                if (r.ok) { ok.textContent = ' ' + d.mensaje; ok.classList.add('visible'); cargarUsuarios(); }
+                else { err.textContent = ' ' + d.error; err.classList.add('visible'); }
+            } catch (e) { err.textContent = 'Error de conexión'; err.classList.add('visible'); }
+        }
+
+        async function desactivarUsuario(id) {
+            await fetch(`/api/usuarios/${id}/desactivar`, { method: 'PUT' });
+            cargarUsuarios();
+        }
+
+        async function cargarCeldas() {
+            try {
+                const r = await fetch('/api/celdas');
+                const lista = await r.json();
+                document.getElementById('tablaCeldas').innerHTML = lista.map(c => `
+                    <tr>
+                        <td>${c.id}</td>
+                        <td><strong>${c.codigo}</strong></td>
+                        <td>${c.tipo}</td>
+                        <td>${c.estado}</td>
+                        <td>
+                            <button class="btn-small btn-warning" onclick="cambiarCelda(${c.id},'Mantenimiento')">Mantenimiento</button>
+                            <button class="btn-small btn-success" onclick="cambiarCelda(${c.id},'Disponible')">Disponible</button>
+                        </td>
+                    </tr>`).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function cambiarCelda(id, estado) {
+            const ok = document.getElementById('msgCelda');
+            const r = await fetch(`/api/celdas/${id}/estado`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estado })
+            });
+            const d = await r.json();
+            ok.textContent = ' ' + (d.mensaje || 'Celda actualizada');
+            ok.classList.add('visible');
+            setTimeout(() => ok.classList.remove('visible'), 3000);
+            cargarCeldas();
+        }
+
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            usuarioActual = null;
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('loginUsuario').value = '';
+            document.getElementById('loginPassword').value = '';
+        }
+
+        document.getElementById('loginPassword').addEventListener('keypress', e => { if (e.key === 'Enter') login(); });
+    </script>
+</body>
+</html>
