@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Pagos - Autos Colombia</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .card { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 5px; background: #fafafa; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #3498db; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #2980b9; }
+        .btn-success { background-color: #27ae60; }
+        .btn-success:hover { background-color: #219150; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .alert { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .header-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-info">
+            <h2>Gestión de Pagos</h2>
+            <span>Bienvenido, <strong>{{ usuario }}</strong></span>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Formulario de Búsqueda -->
+        <div class="card">
+            <h3>1. Consultar Contrato</h3>
+            <form method="POST">
+                <div class="form-group">
+                    <label for="placa">Placa del Vehículo:</label>
+                    <input type="text" id="placa" name="placa" placeholder="Ej: MKT-456" required>
+                </div>
+                <button type="submit" name="accion" value="buscar">Buscar Contrato</button>
+            </form>
+        </div>
+
+        {% if contrato %}
+        <!-- Información del Contrato -->
+        <div class="card">
+            <h3>2. Información del Contrato</h3>
+            <table>
+                <tr><th>Placa</th><td>{{ contrato.placa }}</td></tr>
+                <tr><th>Tipo</th><td>{{ contrato.tipo }}</td></tr>
+                <tr><th>Propietario</th><td>{{ contrato.propietario }}</td></tr>
+                <tr><th>Corte Actual (Fecha Fin)</th><td><strong>{{ contrato.fecha_fin }}</strong></td></tr>
+                <tr><th>Días Restantes</th><td>{{ contrato.dias_restantes }}</td></tr>
+                <tr><th>Estado</th><td>{{ contrato.estado }}</td></tr>
+                <tr><th>Valor Mensual</th><td>${{ "{:,.0f}".format(contrato.valor_mensual) }}</td></tr>
+            </table>
+        </div>
+
+        <!-- Formulario de Registro de Pago -->
+        <div class="card">
+            <h3>3. Registrar Pago</h3>
+            <form method="POST">
+                <input type="hidden" name="placa" value="{{ contrato.placa }}">
+                <div class="form-group">
+                    <label>Valor a Pagar ($):</label>
+                    <input type="number" name="valor" value="{{ contrato.valor_mensual }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Forma de Pago:</label>
+                    <select name="forma_pago">
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="QR">QR</option>
+                        <option value="Consignación">Consignación Bancaria</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Fecha de Pago (Opcional - para pruebas de pago anticipado):</label>
+                    <input type="date" name="fecha_pago">
+                </div>
+                <button type="submit" name="accion" value="registrar" class="btn-success">Registrar Pago</button>
+            </form>
+        </div>
+
+        <!-- Historial -->
+        <div class="card">
+            <h3>4. Historial de Pagos</h3>
+            <form method="POST" style="margin-bottom: 10px;">
+                <input type="hidden" name="placa" value="{{ contrato.placa }}">
+                <button type="submit" name="accion" value="historial">Cargar Historial</button>
+            </form>
+            
+            {% if historial %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Recibo</th>
+                        <th>Fecha Pago</th>
+                        <th>Valor</th>
+                        <th>Periodo Cubierto</th>
+                        <th>Operador</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in historial %}
+                    <tr>
+                        <td>{{ p.numero_recibo }}</td>
+                        <td>{{ p.fecha_pago }}</td>
+                        <td>${{ "{:,.0f}".format(p.valor) }}</td>
+                        <td>{{ p.periodo_inicio }} a {{ p.periodo_fin }}</td>
+                        <td>{{ p.operador }}</td>
+                        <td><a href="/comprobante/{{ p.numero_recibo }}" target="_blank">Ver Comprobante</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No hay pagos registrados para este vehículo o no has cargado el historial.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

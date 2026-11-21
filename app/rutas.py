@@ -1,16 +1,14 @@
-from flask import Blueprint, request, jsonify, session, send_from_directory
-from app.models import Usuario, LogAuditoria, Vehiculo, Contrato, Celda, Estancia
+from flask import Blueprint, request, jsonify, session, send_from_directory, render_template, redirect, url_for, flash
+from app.models import Usuario, LogAuditoria, Vehiculo, Contrato, Celda, Estancia, Pago
 from app.extensions import db
 from datetime import datetime, date
-from app.servicios import ServicioParqueadero, ReglaNegocioError
+from app.servicios import ServicioParqueadero, ReglaNegocioError, ServiciosPago
 import os
 
 bp = Blueprint('parqueadero', __name__)
 
 
-# ==========================================
-# RUTA RAÍZ: Servir el frontend
-# ==========================================
+# RUTA RAÍZ: Servir el frontend SPA
 
 @bp.route('/')
 def frontend_index():
@@ -19,9 +17,7 @@ def frontend_index():
     return send_from_directory(frontend_path, 'index.html')
 
 
-# ==========================================
 # AUTENTICACIÓN
-# ==========================================
 
 @bp.route('/api/login', methods=['POST'])
 def login():
@@ -38,17 +34,6 @@ def login():
         session['usuario_nombre'] = usuario.nombre_completo
         session['usuario_rol'] = usuario.rol
         
-        # TEMPORAL: Log desactivado hasta resolver el problema de la columna 'estado'
-        # log = LogAuditoria(
-        #     id_usuario=usuario.id,
-        #     fecha_hora=datetime.now(),
-        #     accion='Inicio de sesión',
-        #     estado='Exitoso',
-        #     descripcion=f'Usuario {usuario.nombre_usuario} inició sesión'
-        # )
-        # db.session.add(log)
-        # db.session.commit()
-        
         return jsonify({
             'mensaje': 'Login exitoso',
             'id': usuario.id,
@@ -60,28 +45,12 @@ def login():
     
     return jsonify({'error': 'Credenciales inválidas o usuario inactivo'}), 401
 
-
 @bp.route('/api/logout', methods=['POST'])
 def logout():
     """Cerrar sesión"""
-    # TEMPORAL: Log desactivado
-    # if 'usuario_id' in session:
-    #     log = LogAuditoria(
-    #         id_usuario=session['usuario_id'],
-    #         fecha_hora=datetime.now(),
-    #         accion='Cierre de sesión',
-    #         estado='Exitoso'
-    #     )
-    #     db.session.add(log)
-    #     db.session.commit()
-    
     session.clear()
-    return jsonify({'mensaje': 'Sesión cerrada'}), 200
-
-
-# ==========================================
-# ENTRADA DE VEHÍCULOS (PT-01, PT-02, PT-03)
-# ==========================================
+    return jsonify({'mensaje': 'Sesión cerrada'}), 
+# ENTRADA DE VEHÍCULOS (Iteración 1)
 
 @bp.route('/api/entrada', methods=['POST'])
 def entrada():
@@ -93,18 +62,6 @@ def entrada():
             datos['placa'],
             datos['id_usuario']
         )
-        
-        # TEMPORAL: Log desactivado
-        # log = LogAuditoria(
-        #     id_usuario=datos['id_usuario'],
-        #     fecha_hora=datetime.now(),
-        #     accion='Registro de entrada',
-        #     estado='Exitoso',
-        #     descripcion=f'Vehículo {datos["placa"]} ingresó al parqueadero'
-        # )
-        # db.session.add(log)
-        # db.session.commit()
-        
         return jsonify({'message': resultado}), 200
     except ReglaNegocioError as e:
         return jsonify({'error': str(e)}), 400
@@ -112,9 +69,7 @@ def entrada():
         return jsonify({'error': str(e)}), 500
 
 
-# ==========================================
-# CONSULTA DE VEHÍCULOS PRESENTES (PT-04)
-# ==========================================
+# CONSULTA DE VEHÍCULOS PRESENTES (Iteración 1)
 
 @bp.route('/api/vehiculos-presentes', methods=['GET'])
 def vehiculos_presentes():
@@ -123,9 +78,7 @@ def vehiculos_presentes():
     return jsonify(lista), 200
 
 
-# ==========================================
-# GESTIÓN DE USUARIOS (PT-07, PT-08)
-# ==========================================
+# GESTIÓN DE USUARIOS (Iteración 2)
 
 @bp.route('/api/usuarios', methods=['GET'])
 def listar_usuarios():
@@ -140,10 +93,9 @@ def listar_usuarios():
         'estado': u.estado
     } for u in usuarios]), 200
 
-
 @bp.route('/api/usuarios', methods=['POST'])
 def crear_usuario():
-    """Crear nuevo usuario (PT-07)"""
+    """Crear nuevo usuario"""
     datos = request.get_json()
     
     if not datos:
@@ -172,26 +124,14 @@ def crear_usuario():
     db.session.add(nuevo_usuario)
     db.session.commit()
     
-    # TEMPORAL: Log desactivado
-    # log = LogAuditoria(
-    #     id_usuario=session.get('usuario_id'),
-    #     fecha_hora=datetime.now(),
-    #     accion='Creación de usuario',
-    #     estado='Exitoso',
-    #     descripcion=f'Usuario {nuevo_usuario.nombre_usuario} creado con rol {nuevo_usuario.rol}'
-    # )
-    # db.session.add(log)
-    # db.session.commit()
-    
     return jsonify({
         'mensaje': 'Usuario creado exitosamente',
         'id': nuevo_usuario.id
     }), 201
 
-
 @bp.route('/api/usuarios/<int:id>/desactivar', methods=['PUT'])
 def desactivar_usuario(id):
-    """Desactivar usuario (PT-08)"""
+    """Desactivar usuario"""
     usuario = Usuario.query.get(id)
     
     if not usuario:
@@ -200,23 +140,10 @@ def desactivar_usuario(id):
     usuario.estado = 'Inactivo'
     db.session.commit()
     
-    # TEMPORAL: Log desactivado
-    # log = LogAuditoria(
-    #     id_usuario=session.get('usuario_id'),
-    #     fecha_hora=datetime.now(),
-    #     accion='Desactivación de usuario',
-    #     estado='Exitoso',
-    #     descripcion=f'Usuario {usuario.nombre_completo} desactivado'
-    # )
-    # db.session.add(log)
-    # db.session.commit()
-    
     return jsonify({'mensaje': f'Usuario {usuario.nombre_completo} desactivado'}), 200
 
 
-# ==========================================
-# GESTIÓN DE CELDAS (PT-09, PT-10)
-# ==========================================
+# GESTIÓN DE CELDAS (Iteración 2)
 
 @bp.route('/api/celdas', methods=['GET'])
 def listar_celdas():
@@ -229,10 +156,9 @@ def listar_celdas():
         'estado': c.estado
     } for c in celdas]), 200
 
-
 @bp.route('/api/celdas/<int:id>/estado', methods=['PUT'])
 def cambiar_estado_celda(id):
-    """Cambiar estado de celda (PT-09, PT-10)"""
+    """Cambiar estado de celda"""
     celda = Celda.query.get(id)
     
     if not celda:
@@ -250,17 +176,166 @@ def cambiar_estado_celda(id):
     celda.estado = datos['estado']
     db.session.commit()
     
-    # TEMPORAL: Log desactivado
-    # log = LogAuditoria(
-    #     id_usuario=session.get('usuario_id'),
-    #     fecha_hora=datetime.now(),
-    #     accion='Cambio de estado de celda',
-    #     estado='Exitoso',
-    #     descripcion=f'Celda {celda.codigo} cambiada a {datos["estado"]}'
-    # )
-    # db.session.add(log)
-    # db.session.commit()
-    
     return jsonify({
         'mensaje': f'Celda {celda.codigo} actualizada a {datos["estado"]}'
     }), 200
+
+
+# API DE PAGOS (Iteración 3) 
+
+
+@bp.route('/api/pagos/consultar', methods=['GET'])
+def api_consultar_contrato():
+    """Consulta el contrato de un vehículo por placa"""
+    if 'usuario_id' not in session:
+        return jsonify({'error': 'No autorizado'}), 401
+    
+    placa = request.args.get('placa', '').strip().upper()
+    if not placa:
+        return jsonify({'error': 'La placa es obligatoria'}), 400
+    
+    contrato_info, error = ServiciosPago.consultar_contrato(placa)
+    if error:
+        return jsonify({'error': error}), 404
+    
+    return jsonify(contrato_info), 200
+
+
+@bp.route('/api/pagos/registrar', methods=['POST'])
+def api_registrar_pago():
+    """Registra un pago de mensualidad"""
+    if 'usuario_id' not in session:
+        return jsonify({'error': 'No autorizado'}), 401
+    
+    datos = request.get_json()
+    if not datos:
+        return jsonify({'error': 'Datos incompletos'}), 422
+    
+    placa = datos.get('placa', '').strip().upper()
+    valor = datos.get('valor')
+    forma_pago = datos.get('forma_pago', 'Efectivo')
+    fecha_pago_str = datos.get('fecha_pago')
+    id_usuario = session['usuario_id']
+    
+    if not placa or not valor:
+        return jsonify({'error': 'Placa y valor son obligatorios'}), 422
+    
+    try:
+        valor = float(valor)
+    except ValueError:
+        return jsonify({'error': 'El valor debe ser un número'}), 422
+    
+    fecha_pago = None
+    if fecha_pago_str:
+        try:
+            fecha_pago = datetime.strptime(fecha_pago_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Formato de fecha inválido'}), 422
+    
+    pago, mensaje = ServiciosPago.registrar_pago(
+        placa, valor, forma_pago, id_usuario, fecha_pago
+    )
+    
+    if pago:
+        return jsonify({'success': True, 'data': pago, 'mensaje': mensaje}), 201
+    else:
+        return jsonify({'success': False, 'error': mensaje}), 400
+
+
+@bp.route('/api/pagos/historial', methods=['GET'])
+def api_historial_pagos():
+    """Consulta el historial de pagos de un vehículo"""
+    if 'usuario_id' not in session:
+        return jsonify({'error': 'No autorizado'}), 401
+    
+    placa = request.args.get('placa', '').strip().upper()
+    if not placa:
+        return jsonify({'error': 'La placa es obligatoria'}), 400
+    
+    historial, error = ServiciosPago.consultar_historial(placa)
+    if error:
+        return jsonify({'error': error}), 404
+    
+    return jsonify(historial), 200
+
+
+@bp.route('/api/comprobante/<numero_recibo>', methods=['GET'])
+def api_comprobante(numero_recibo):
+    """Obtiene los datos de un comprobante"""
+    if 'usuario_id' not in session:
+        return jsonify({'error': 'No autorizado'}), 401
+    
+    pago = Pago.query.filter_by(numero_recibo=numero_recibo).first()
+    if not pago:
+        return jsonify({'error': 'Comprobante no encontrado'}), 404
+    
+    return jsonify(pago.to_dict()), 200
+
+
+
+# RUTAS LEGACY (render_template) - Se mantienen por compatibilidad
+
+
+@bp.route('/pagos', methods=['GET', 'POST'])
+def pagos():
+    """Página de gestión de pagos (versión legacy con templates)"""
+    if 'usuario_id' not in session:
+        return redirect(url_for('parqueadero.frontend_index'))
+    
+    contrato_info = None
+    historial = []
+    
+    if request.method == 'POST':
+        accion = request.form.get('accion')
+        placa = request.form.get('placa')
+        id_usuario = session['usuario_id']
+        
+        if accion == 'buscar':
+            contrato_info, error = ServiciosPago.consultar_contrato(placa)
+            if error:
+                flash(error, 'error')
+        
+        elif accion == 'registrar':
+            try:
+                valor = float(request.form.get('valor'))
+            except ValueError:
+                flash("El valor debe ser un número válido", 'error')
+                return redirect(url_for('parqueadero.pagos'))
+            
+            forma_pago = request.form.get('forma_pago')
+            fecha_pago_str = request.form.get('fecha_pago')
+            
+            fecha_pago = None
+            if fecha_pago_str:
+                fecha_pago = datetime.strptime(fecha_pago_str, '%Y-%m-%d').date()
+            
+            pago, mensaje = ServiciosPago.registrar_pago(
+                placa, valor, forma_pago, id_usuario, fecha_pago
+            )
+            
+            if pago:
+                flash(mensaje, 'success')
+            else:
+                flash(mensaje, 'error')
+            
+            contrato_info, _ = ServiciosPago.consultar_contrato(placa)
+        
+        elif accion == 'historial':
+            historial, error = ServiciosPago.consultar_historial(placa)
+            if error:
+                flash(error, 'error')
+    
+    return render_template('pagos.html', 
+                          contrato=contrato_info, 
+                          historial=historial,
+                          usuario=session.get('usuario_nombre'))
+
+@bp.route('/comprobante/<numero_recibo>')
+def comprobante(numero_recibo):
+    """Vista del comprobante de pago (versión legacy)"""
+    pago = Pago.query.filter_by(numero_recibo=numero_recibo).first()
+    if not pago:
+        flash("Comprobante no encontrado", 'error')
+        return redirect(url_for('parqueadero.pagos'))
+    
+    return render_template('comprobante.html', pago=pago.to_dict())

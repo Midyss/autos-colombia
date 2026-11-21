@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Comprobante de Pago - Autos Colombia</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; }
+        .comprobante { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 15px; margin-bottom: 20px; }
+        .header h2 { color: #2c3e50; margin: 0; }
+        .header p { color: #7f8c8d; margin: 5px 0 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { width: 40%; color: #555; }
+        td { font-weight: bold; color: #2c3e50; }
+        .footer { text-align: center; margin-top: 30px; }
+        button { background-color: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="comprobante">
+        <div class="header">
+            <h2>AUTOS COLOMBIA</h2>
+            <p>Comprobante de Pago de Mensualidad</p>
+        </div>
+        
+        <table>
+            <tr>
+                <th>Número de Recibo:</th>
+                <td>{{ pago.numero_recibo }}</td>
+            </tr>
+            <tr>
+                <th>Fecha de Pago:</th>
+                <td>{{ pago.fecha_pago }}</td>
+            </tr>
+            <tr>
+                <th>Forma de Pago:</th>
+                <td>{{ pago.forma_pago }}</td>
+            </tr>
+            <tr>
+                <th>Valor Pagado:</th>
+                <td>${{ "{:,.0f}".format(pago.valor) }}</td>
+            </tr>
+            <tr>
+                <th>Periodo Cubierto:</th>
+                <td>Del {{ pago.periodo_inicio }} al {{ pago.periodo_fin }}</td>
+            </tr>
+            <tr>
+                <th>Registrado por:</th>
+                <td>{{ pago.operador }}</td>
+            </tr>
+        </table>
+
+        <div class="footer">
+            <p style="color: #7f8c8d; font-size: 12px;">Este comprobante es un soporte válido de su pago mensual.</p>
+            <button onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+        </div>
+    </div>
+</body>
+</html>

@@ -14,7 +14,6 @@ class Usuario(db.Model):
     rol = db.Column(db.Enum('Administrador', 'Operador'), default='Operador')
     estado = db.Column(db.Enum('Activo', 'Inactivo'), default='Activo')
     
-    # Métodos para encriptar y verificar contraseñas
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
     
@@ -34,7 +33,6 @@ class Vehiculo(db.Model):
     color = db.Column(db.String(20), nullable=False)
     propietario = db.Column(db.String(100))
     
-    # Relación: Un vehículo puede tener muchos contratos
     contratos = db.relationship('Contrato', backref='vehiculo', lazy=True)
     
     def __repr__(self):
@@ -66,7 +64,7 @@ class Celda(db.Model):
         return f'<Celda {self.codigo}>'
 
 
-# 5. Tabla de Estancias (Trazabilidad real con id_usuario)
+# 5. Tabla de Estancias
 class Estancia(db.Model):
     __tablename__ = 'estancia'
     id = db.Column(db.Integer, primary_key=True)
@@ -76,7 +74,6 @@ class Estancia(db.Model):
     fecha_entrada = db.Column(db.DateTime, default=datetime.utcnow)
     fecha_salida = db.Column(db.DateTime, nullable=True)
     
-    # Relaciones para facilitar consultas
     vehiculo = db.relationship('Vehiculo', backref='estancias')
     celda = db.relationship('Celda', backref='estancias')
     usuario = db.relationship('Usuario', backref='estancias')
@@ -95,8 +92,43 @@ class LogAuditoria(db.Model):
     estado = db.Column(db.String(50), default='Exitoso')
     descripcion = db.Column(db.String(500), nullable=True)
     
-    # Relación con Usuario
     usuario = db.relationship('Usuario', backref='logs')
     
     def __repr__(self):
         return f'<Log {self.id} - {self.accion}>'
+
+
+# 7. Tabla de Pagos (Iteración 3)
+class Pago(db.Model):
+    __tablename__ = 'pago'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    # CORRECCIÓN: 'contrato.id' en minúscula porque así se llama el __tablename__
+    id_contrato = db.Column(db.Integer, db.ForeignKey('contrato.id'), nullable=False)
+    valor = db.Column(db.Float, nullable=False)
+    fecha_pago = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    forma_pago = db.Column(db.String(50), nullable=False)
+    periodo_inicio = db.Column(db.Date, nullable=False)
+    periodo_fin = db.Column(db.Date, nullable=False)
+    numero_recibo = db.Column(db.String(30), unique=True, nullable=False)
+    id_usuario = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    
+    # Relaciones
+    contrato = db.relationship('Contrato', backref='pagos')
+    usuario = db.relationship('Usuario', backref='pagos')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'numero_recibo': self.numero_recibo,
+            'valor': self.valor,
+            'fecha_pago': self.fecha_pago.strftime('%d/%m/%Y %H:%M'),
+            'forma_pago': self.forma_pago,
+            'periodo_inicio': self.periodo_inicio.strftime('%d/%m/%Y'),
+            'periodo_fin': self.periodo_fin.strftime('%d/%m/%Y'),
+            'operador': self.usuario.nombre_completo if self.usuario else 'N/A',
+            'id_usuario': self.id_usuario
+        }
+
+    def __repr__(self):
+        return f'<Pago {self.numero_recibo}>'

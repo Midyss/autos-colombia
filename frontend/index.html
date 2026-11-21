@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Autos Colombia - Sistema de Parqueadero</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
         body { background: #f5f7fa; color: #333; }
 
         /* LOGIN */
@@ -146,6 +146,36 @@
         td { padding: 12px; border-bottom: 1px solid #e0e0e0; font-size: 13px; }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
         .form-grid input, .form-grid select { padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 13px; }
+
+        /* ESTILOS PARA PAGOS */
+        .paso-pago { margin-bottom: 25px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa; }
+        .paso-pago h3 { color: #1e3a5f; margin-bottom: 15px; font-size: 16px; }
+        .paso-numero { 
+            display: inline-block; width: 28px; height: 28px; background: #1e3a5f; 
+            color: white; border-radius: 50%; text-align: center; line-height: 28px; 
+            font-weight: 700; margin-right: 10px; font-size: 14px;
+        }
+        .info-contrato { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+        .info-item { background: white; padding: 10px 15px; border-radius: 6px; border-left: 3px solid #4ade80; }
+        .info-item label { font-size: 11px; color: #666; text-transform: uppercase; }
+        .info-item strong { display: block; font-size: 15px; color: #1e3a5f; margin-top: 3px; }
+        .estado-vencido { border-left-color: #dc2626 !important; }
+        .estado-por-vencer { border-left-color: #f59e0b !important; }
+        .estado-aldia { border-left-color: #4ade80 !important; }
+        .comprobante-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); display: none; align-items: center;
+            justify-content: center; z-index: 2000;
+        }
+        .comprobante-modal.visible { display: flex; }
+        .comprobante-box {
+            background: white; padding: 30px; border-radius: 8px;
+            max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;
+        }
+        .comprobante-box h3 { color: #1e3a5f; border-bottom: 2px solid #4ade80; padding-bottom: 10px; margin-bottom: 20px; }
+        .comprobante-box table { margin-top: 15px; }
+        .btn-cerrar { background: #666; margin-top: 15px; }
+        .loading { text-align: center; padding: 20px; color: #666; }
     </style>
 </head>
 <body>
@@ -169,13 +199,13 @@
                 <p class="subtitle">Accede a tu cuenta para continuar</p>
                 <div class="form-group">
                     <label>Nombre de usuario</label>
-                    <input type="text" id="loginUsuario" autocomplete="off" autocorrect="off" spellcheck="false">
+                    <input type="text" id="loginUsuario" autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label>Contraseña</label>
-                    <input type="password" id="loginPassword" autocomplete="new-password">
+                    <input type="password" id="loginPassword">
                 </div>
-                <button class="btn-login" onclick="login()">Ingresar</button>
+                <button class="btn-login" id="btnLogin">Ingresar</button>
                 <div id="loginError" class="error-msg"></div>
             </div>
         </div>
@@ -223,8 +253,14 @@
         </main>
     </div>
 
+    <!-- MODAL COMPROBANTE -->
+    <div id="comprobanteModal" class="comprobante-modal">
+        <div class="comprobante-box" id="comprobanteContent"></div>
+    </div>
+
     <script>
         let usuarioActual = null;
+        let contratoActual = null;
 
         window.addEventListener('load', () => {
             document.getElementById('loginUsuario').value = '';
@@ -240,15 +276,22 @@
             document.getElementById('profileDropdown').classList.toggle('open');
         }
 
+        // LOGIN
+        document.getElementById('btnLogin').addEventListener('click', login);
+        document.getElementById('loginPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') login();
+        });
+
         async function login() {
             const errorDiv = document.getElementById('loginError');
-            errorDiv.classList.remove('visible');
+            errorDiv.style.display = 'none';
+            
             const usuario = document.getElementById('loginUsuario').value.trim();
             const password = document.getElementById('loginPassword').value.trim();
 
             if (!usuario || !password) {
                 errorDiv.textContent = 'Por favor completa todos los campos';
-                errorDiv.classList.add('visible');
+                errorDiv.style.display = 'block';
                 return;
             }
 
@@ -256,25 +299,28 @@
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ usuario, password })
+                    body: JSON.stringify({ usuario: usuario, password: password })
                 });
+                
                 const data = await response.json();
+                
                 if (response.ok) {
                     usuarioActual = data;
                     mostrarDashboard(data);
                 } else {
                     errorDiv.textContent = data.error || 'Credenciales inválidas';
-                    errorDiv.classList.add('visible');
+                    errorDiv.style.display = 'block';
                 }
             } catch (err) {
-                errorDiv.textContent = 'Error de conexión. Verifica que Flask esté corriendo.';
-                errorDiv.classList.add('visible');
+                errorDiv.textContent = 'Error de conexión: ' + err.message;
+                errorDiv.style.display = 'block';
             }
         }
 
         function mostrarDashboard(u) {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
+            
             const iniciales = u.nombre_completo.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
             document.getElementById('userAvatar').textContent = iniciales;
             document.getElementById('profileAvatar').textContent = iniciales;
@@ -284,6 +330,7 @@
             document.getElementById('sidebarUserEmail').textContent = u.nombre_usuario + '@autoscolombia.co';
             document.getElementById('menuUserName').textContent = u.nombre_completo;
             document.getElementById('menuUserEmail').textContent = u.nombre_usuario + '@autoscolombia.co';
+            
             const badge = document.getElementById('menuUserRole');
             badge.textContent = u.rol;
             badge.className = 'role-badge ' + (u.rol === 'Administrador' ? 'role-admin' : 'role-operador');
@@ -294,13 +341,15 @@
                     <li><a class="active" onclick="ir('dashboard', this)">Dashboard</a></li>
                     <li><a onclick="ir('entrada', this)">Registrar Entrada</a></li>
                     <li><a onclick="ir('vehiculos', this)">Vehículos Presentes</a></li>
+                    <li><a onclick="ir('pagos', this)">Registrar Pago</a></li>
                     <li><a onclick="ir('usuarios', this)">Gestión de Usuarios</a></li>
                     <li><a onclick="ir('celdas', this)">Gestión de Celdas</a></li>`;
             } else {
                 menu.innerHTML = `
                     <li><a class="active" onclick="ir('dashboard', this)">Dashboard</a></li>
                     <li><a onclick="ir('entrada', this)">Registrar Entrada</a></li>
-                    <li><a onclick="ir('vehiculos', this)">Vehículos Presentes</a></li>`;
+                    <li><a onclick="ir('vehiculos', this)">Vehículos Presentes</a></li>
+                    <li><a onclick="ir('pagos', this)">Registrar Pago</a></li>`;
             }
             ir('dashboard');
         }
@@ -313,6 +362,7 @@
             }
             const c = document.getElementById('contentArea');
             const t = document.getElementById('pageTitle');
+            
             if (seccion === 'dashboard') {
                 t.textContent = 'Dashboard';
                 c.innerHTML = `<div class="content-panel"><h2>Bienvenido, ${usuarioActual.nombre_completo.split(' ')[0]}</h2><p>Rol: ${usuarioActual.rol}. Usa el menú lateral para navegar.</p></div>`;
@@ -344,6 +394,73 @@
                         </table>
                     </div>`;
                 cargarVehiculos();
+            } else if (seccion === 'pagos') {
+                t.textContent = 'Gestión de Pagos';
+                c.innerHTML = `
+                    <div class="content-panel">
+                        <h2>Gestión de Pagos</h2>
+                        <p>Registra el pago de la mensualidad de un vehículo.</p>
+                        
+                        <div id="msgPago" class="success-msg"></div>
+                        <div id="errPago" class="error-msg"></div>
+                        
+                        <div class="paso-pago">
+                            <h3><span class="paso-numero">1</span>Buscar vehículo</h3>
+                            <div class="form-inline">
+                                <div class="form-group" style="margin:0">
+                                    <label>Placa del vehículo</label>
+                                    <input type="text" id="pagoPlaca" placeholder="Ej: MKT-456">
+                                </div>
+                                <button class="btn-action" onclick="buscarContrato()">Buscar</button>
+                            </div>
+                        </div>
+                        
+                        <div id="infoContrato" style="display:none;">
+                            <div class="paso-pago">
+                                <h3><span class="paso-numero">2</span>Información del contrato</h3>
+                                <div class="info-contrato" id="datosContrato"></div>
+                            </div>
+                            
+                            <div class="paso-pago">
+                                <h3><span class="paso-numero">3</span>Datos del pago</h3>
+                                <div class="form-grid">
+                                    <div class="form-group" style="margin:0">
+                                        <label>Fecha de pago</label>
+                                        <input type="date" id="pagoFecha">
+                                    </div>
+                                    <div class="form-group" style="margin:0">
+                                        <label>Forma de pago</label>
+                                        <select id="pagoForma">
+                                            <option value="Efectivo">Efectivo</option>
+                                            <option value="QR">QR</option>
+                                            <option value="Consignación">Consignación</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin:0">
+                                        <label>Valor recibido ($)</label>
+                                        <input type="number" id="pagoValor" placeholder="250000">
+                                    </div>
+                                    <div class="form-group" style="margin:0; display:flex; align-items:end;">
+                                        <button class="btn-action" style="width:100%" onclick="registrarPago()">Registrar Pago</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="paso-pago">
+                                <h3><span class="paso-numero">4</span>Historial de pagos</h3>
+                                <button class="btn-action" onclick="cargarHistorial()" style="margin-bottom:15px;">Cargar historial</button>
+                                <div id="tablaHistorialContainer">
+                                    <p style="color:#666; font-size:13px;">Haz clic en "Cargar historial" para ver los pagos.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                
+                const hoy = new Date().toISOString().split('T')[0];
+                setTimeout(() => {
+                    const fechaInput = document.getElementById('pagoFecha');
+                    if (fechaInput) fechaInput.value = hoy;
+                }, 100);
             } else if (seccion === 'usuarios') {
                 t.textContent = 'Gestión de Usuarios';
                 c.innerHTML = `
@@ -382,6 +499,193 @@
             }
         }
 
+        // FUNCIONES DE PAGOS
+        async function buscarContrato() {
+            const placa = document.getElementById('pagoPlaca').value.trim().toUpperCase();
+            const msg = document.getElementById('msgPago');
+            const err = document.getElementById('errPago');
+            msg.classList.remove('visible');
+            err.classList.remove('visible');
+
+            if (!placa) {
+                err.textContent = 'Ingresa una placa';
+                err.classList.add('visible');
+                return;
+            }
+
+            try {
+                const r = await fetch('/api/pagos/consultar?placa=' + placa);
+                const d = await r.json();
+                
+                if (r.ok) {
+                    contratoActual = d;
+                    mostrarInfoContrato(d);
+                } else {
+                    err.textContent = ' ' + (d.error || 'Vehículo no encontrado');
+                    err.classList.add('visible');
+                    document.getElementById('infoContrato').style.display = 'none';
+                }
+            } catch (e) {
+                err.textContent = ' Error de conexión';
+                err.classList.add('visible');
+            }
+        }
+
+        function mostrarInfoContrato(c) {
+            const container = document.getElementById('datosContrato');
+            const estadoClass = c.estado === 'Vencido' ? 'estado-vencido' : 
+                               c.estado === 'Por vencer' ? 'estado-por-vencer' : 'estado-aldia';
+            
+            container.innerHTML = `
+                <div class="info-item">
+                    <label>Propietario</label>
+                    <strong>${c.propietario || 'N/A'}</strong>
+                </div>
+                <div class="info-item">
+                    <label>Tipo</label>
+                    <strong>${c.tipo}</strong>
+                </div>
+                <div class="info-item">
+                    <label>Valor mensual</label>
+                    <strong>$${c.valor_mensual.toLocaleString('es-CO')}</strong>
+                </div>
+                <div class="info-item">
+                    <label>Corte actual</label>
+                    <strong>${c.fecha_fin}</strong>
+                </div>
+                <div class="info-item ${estadoClass}">
+                    <label>Días restantes</label>
+                    <strong style="color:${c.estado === 'Vencido' ? '#dc2626' : c.estado === 'Por vencer' ? '#f59e0b' : '#065f46'}">${c.dias_restantes} días</strong>
+                </div>
+                <div class="info-item ${estadoClass}">
+                    <label>Estado</label>
+                    <strong>${c.estado}</strong>
+                </div>
+            `;
+            
+            document.getElementById('infoContrato').style.display = 'block';
+            document.getElementById('pagoValor').value = c.valor_mensual;
+        }
+
+        async function registrarPago() {
+            if (!contratoActual) {
+                const err = document.getElementById('errPago');
+                err.textContent = ' Primero busca un contrato';
+                err.classList.add('visible');
+                return;
+            }
+
+            const datos = {
+                placa: contratoActual.placa,
+                valor: parseFloat(document.getElementById('pagoValor').value),
+                forma_pago: document.getElementById('pagoForma').value,
+                fecha_pago: document.getElementById('pagoFecha').value || null
+            };
+
+            const msg = document.getElementById('msgPago');
+            const err = document.getElementById('errPago');
+            msg.classList.remove('visible');
+            err.classList.remove('visible');
+
+            if (!datos.valor || datos.valor <= 0) {
+                err.textContent = ' Ingresa un valor válido';
+                err.classList.add('visible');
+                return;
+            }
+
+            try {
+                const r = await fetch('/api/pagos/registrar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datos)
+                });
+                const d = await r.json();
+
+                if (r.ok) {
+                    msg.textContent = ' ' + d.mensaje;
+                    msg.classList.add('visible');
+                    //  EL CAMBIO: Ventana emergente 
+                    alert(d.mensaje); 
+                    buscarContrato();
+                } else {
+                    err.textContent = ' ' + (d.error || 'Error al registrar el pago');
+                    err.classList.add('visible');
+                    alert(d.error || 'Error al registrar el pago');
+                }
+            } catch (e) {
+                err.textContent = ' Error de conexión';
+                err.classList.add('visible');
+                alert('Error de conexión');
+            }
+        }
+
+        async function cargarHistorial() {
+            if (!contratoActual) return;
+            
+            const container = document.getElementById('tablaHistorialContainer');
+            container.innerHTML = '<div class="loading">Cargando...</div>';
+
+            try {
+                const r = await fetch('/api/pagos/historial?placa=' + contratoActual.placa);
+                const lista = await r.json();
+
+                if (r.ok && lista.length > 0) {
+                    let html = '<table><thead><tr><th>Recibo</th><th>Fecha</th><th>Valor</th><th>Periodo</th><th>Operador</th><th>Acción</th></tr></thead><tbody>';
+                    
+                    lista.forEach(p => {
+                        html += '<tr><td><strong>' + p.numero_recibo + '</strong></td><td>' + p.fecha_pago + '</td><td>$' + p.valor.toLocaleString('es-CO') + '</td><td>' + p.periodo_inicio + ' → ' + p.periodo_fin + '</td><td>' + p.operador + '</td><td><button class="btn-small btn-success" onclick="verComprobante(\'' + p.numero_recibo + '\')">Ver</button></td></tr>';
+                    });
+                    
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p style="color:#666; font-size:13px;">No hay pagos registrados.</p>';
+                }
+            } catch (e) {
+                container.innerHTML = '<p style="color:#dc2626;">Error al cargar el historial</p>';
+            }
+        }
+
+        async function verComprobante(numeroRecibo) {
+            const modal = document.getElementById('comprobanteModal');
+            const content = document.getElementById('comprobanteContent');
+            
+            content.innerHTML = '<div class="loading">Cargando comprobante...</div>';
+            modal.classList.add('visible');
+
+            try {
+                const r = await fetch('/api/comprobante/' + numeroRecibo);
+                const p = await r.json();
+
+                if (r.ok) {
+                    content.innerHTML = `
+                        <h3>AUTOS COLOMBIA - Comprobante de Pago</h3>
+                        <table>
+                            <tr><th>Número de recibo:</th><td><strong>${p.numero_recibo}</strong></td></tr>
+                            <tr><th>Fecha de pago:</th><td>${p.fecha_pago}</td></tr>
+                            <tr><th>Forma de pago:</th><td>${p.forma_pago}</td></tr>
+                            <tr><th>Valor pagado:</th><td><strong>$${p.valor.toLocaleString('es-CO')}</strong></td></tr>
+                            <tr><th>Periodo cubierto:</th><td><strong>Del ${p.periodo_inicio} al ${p.periodo_fin}</strong></td></tr>
+                            <tr><th>Registrado por:</th><td>${p.operador}</td></tr>
+                        </table>
+                        <div style="text-align:center; margin-top:20px;">
+                            <button class="btn-action" onclick="window.print()"> Imprimir</button>
+                            <button class="btn-action btn-cerrar" onclick="cerrarComprobante()">Cerrar</button>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = '<p style="color:#dc2626;">Error: ' + p.error + '</p><button class="btn-action btn-cerrar" onclick="cerrarComprobante()">Cerrar</button>';
+                }
+            } catch (e) {
+                content.innerHTML = '<p style="color:#dc2626;">Error de conexión</p><button class="btn-action btn-cerrar" onclick="cerrarComprobante()">Cerrar</button>';
+            }
+        }
+
+        function cerrarComprobante() {
+            document.getElementById('comprobanteModal').classList.remove('visible');
+        }
+
+        // FUNCIONES EXISTENTES
         async function registrarEntrada() {
             const placa = document.getElementById('placaInput').value.trim();
             const ok = document.getElementById('msgEntrada');
@@ -408,7 +712,7 @@
                 if (lista.length === 0) {
                     tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#666">No hay vehículos presentes</td></tr>';
                 } else {
-                    tb.innerHTML = lista.map(v => `<tr><td><strong>${v.placa}</strong></td><td>${v.tipo}</td><td>${v.celda}</td><td>${v.operador}</td><td>${v.fecha_entrada}</td></tr>`).join('');
+                    tb.innerHTML = lista.map(v => '<tr><td><strong>' + v.placa + '</strong></td><td>' + v.tipo + '</td><td>' + v.celda + '</td><td>' + v.operador + '</td><td>' + v.fecha_entrada + '</td></tr>').join('');
                 }
             } catch (e) { console.error(e); }
         }
@@ -424,7 +728,7 @@
                         <td>${u.nombre_usuario}</td>
                         <td>${u.rol}</td>
                         <td><span class="role-badge ${u.estado==='Activo'?'role-operador':'role-admin'}">${u.estado}</span></td>
-                        <td>${u.estado==='Activo' ? `<button class="btn-small btn-danger" onclick="desactivarUsuario(${u.id})">Desactivar</button>` : '-'}</td>
+                        <td>${u.estado==='Activo' ? '<button class="btn-small btn-danger" onclick="desactivarUsuario(' + u.id + ')">Desactivar</button>' : '-'}</td>
                     </tr>`).join('');
             } catch (e) { console.error(e); }
         }
@@ -453,7 +757,7 @@
         }
 
         async function desactivarUsuario(id) {
-            await fetch(`/api/usuarios/${id}/desactivar`, { method: 'PUT' });
+            await fetch('/api/usuarios/' + id + '/desactivar', { method: 'PUT' });
             cargarUsuarios();
         }
 
@@ -477,7 +781,7 @@
 
         async function cambiarCelda(id, estado) {
             const ok = document.getElementById('msgCelda');
-            const r = await fetch(`/api/celdas/${id}/estado`, {
+            const r = await fetch('/api/celdas/' + id + '/estado', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ estado })
@@ -497,8 +801,6 @@
             document.getElementById('loginUsuario').value = '';
             document.getElementById('loginPassword').value = '';
         }
-
-        document.getElementById('loginPassword').addEventListener('keypress', e => { if (e.key === 'Enter') login(); });
     </script>
 </body>
 </html>
