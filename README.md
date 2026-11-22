@@ -2,7 +2,7 @@
 
 Sistema de información completo para la gestión de un parqueadero que opera por **mensualidad**. Desarrollado con arquitectura en capas usando Python, Flask, MySQL y JavaScript.
 
----
+
 
 ##  Información del Proyecto
 
@@ -15,7 +15,7 @@ Sistema de información completo para la gestión de un parqueadero que opera po
 | **Institución** | Institución Universitaria Digital de Antioquia |
 | **Fecha** | Noviembre 2026 |
 
----
+
 
 ## 👥 Equipo de Desarrollo
 
@@ -23,7 +23,7 @@ Sistema de información completo para la gestión de un parqueadero que opera po
 - **Diego Andrés Ruiz Rodríguez** 
 - **Erika Daniela Zapata Molina** 
 
----
+
 
 ##  Iteraciones del Proyecto
 
@@ -56,7 +56,7 @@ Sistema de información completo para la gestión de un parqueadero que opera po
 - **Regla de negocio clave**: el periodo se calcula desde el corte del contrato, NO desde la fecha de pago
 
 
----
+
 
 ## Arquitectura del Sistema
 
@@ -76,6 +76,6 @@ autos-colombia2/
 │ └── 04_pagos/ (Capturas Iteración 3 - PT-11 a PT-15)
 ├── requirements.txt (Dependencias Python)
 ├── run.py (Punto de entrada de la aplicación)
-└── README.md (Este archivo)
+└── README.md 
 
 
