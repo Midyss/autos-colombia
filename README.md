@@ -63,19 +63,31 @@ Sistema de información completo para la gestión de un parqueadero que opera po
 autos-colombia2/
 ├── app/
 │ ├── models.py (Modelos ORM: Usuario, Vehiculo, Contrato, Pago, etc.)
+
 │ ├── servicios.py (Lógica de negocio: ServicioParqueadero, ServiciosPago)
+
 │ ├── rutas.py (Endpoints API REST - Flask Blueprint)
+
 │ └── extensions.py (Configuración SQLAlchemy)
+
 ├── frontend/
+
 │ └── index.html (Interfaz SPA con JavaScript puro)
+
 ├── database/
+
 │ └── script.sql (Script de creación de BD)
+
 ├── evidencias/
+
 │ ├── 01_entrada/ (Capturas Iteración 1)
 │ ├── 02_mysql/ (Capturas Iteración 2)
 │ └── 04_pagos/ (Capturas Iteración 3 - PT-11 a PT-15)
+
 ├── requirements.txt (Dependencias Python)
+
 ├── run.py (Punto de entrada de la aplicación)
+
 └── README.md 
 
 
